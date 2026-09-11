@@ -1,0 +1,191 @@
+package service;
+
+import javazoom.jl.player.Player;
+
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.net.URL;
+import java.net.URLConnection;
+
+public class AudioPlayer {
+
+    private Player player;
+    private Thread playThread;
+
+    private String currentSource;
+    private boolean online = false;
+    private boolean paused = false;
+
+    // =========================================
+    // PLAY LOCAL MP3
+    // =========================================
+
+    public void play(String filePath) {
+
+        stop();
+
+        currentSource = filePath;
+        online = false;
+        paused = false;
+
+        playThread = new Thread(() -> {
+
+            try {
+
+                FileInputStream fis =
+                        new FileInputStream(filePath);
+
+                player = new Player(fis);
+
+                System.out.println("Playing: " + filePath);
+
+                player.play();
+
+                System.out.println("Song finished.");
+
+            } catch (Exception e) {
+
+                System.out.println(
+                        "Audio Error: " + e.getMessage()
+                );
+            }
+        });
+
+        playThread.start();
+    }
+
+    // =========================================
+    // PLAY ONLINE MP3
+    // =========================================
+
+    public void playOnline(String urlString) {
+
+        stop();
+
+        currentSource = urlString;
+        online = true;
+        paused = false;
+
+        playThread = new Thread(() -> {
+
+            try {
+
+                URL url = new URL(urlString);
+
+                URLConnection connection =
+                        url.openConnection();
+
+                connection.setConnectTimeout(10000);
+                connection.setReadTimeout(15000);
+
+                connection.setRequestProperty(
+                        "User-Agent",
+                        "Mozilla/5.0"
+                );
+
+                InputStream inputStream =
+                        connection.getInputStream();
+
+                player = new Player(inputStream);
+
+                System.out.println(
+                        "Playing online: " + urlString
+                );
+
+                player.play();
+
+                System.out.println(
+                        "Online song finished."
+                );
+
+            } catch (Exception e) {
+
+                System.out.println(
+                        "Online Audio Error: "
+                                + e.getMessage()
+                );
+            }
+        });
+
+        playThread.start();
+    }
+
+    // =========================================
+    // PAUSE
+    // =========================================
+
+    public void pause() {
+
+        if (player != null) {
+
+            player.close();
+
+            player = null;
+
+            paused = true;
+
+            System.out.println("Music paused.");
+        }
+    }
+
+    // =========================================
+    // RESUME
+    // =========================================
+
+    public void resume() {
+
+        if (!paused || currentSource == null) {
+            return;
+        }
+
+        System.out.println("Music resumed.");
+
+        if (online) {
+
+            playOnline(currentSource);
+
+        } else {
+
+            play(currentSource);
+        }
+
+        paused = false;
+    }
+
+    // =========================================
+    // STOP
+    // =========================================
+
+    public void stop() {
+
+        if (player != null) {
+
+            player.close();
+
+            player = null;
+        }
+
+        if (playThread != null) {
+
+            playThread.interrupt();
+
+            playThread = null;
+        }
+
+        paused = false;
+    }
+
+    // =========================================
+    // STATUS
+    // =========================================
+
+    public boolean isPaused() {
+
+        return paused;
+    }
+
+    public boolean isPlaying() {
+
+        return player != null;
+    }
+}
